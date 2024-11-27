@@ -1,39 +1,41 @@
 <!-- vscode-markdown-toc -->
 * [Operator Deployment](#operator-deployment)
-	* [Deploy the operator on your cluster](#deploy-the-operator-on-your-cluster)
-	* [Run](#run)
+    * [Deploy the operator on your cluster](#deploy-the-operator-on-your-cluster)
+    * [Run](#run)
 * [Local Deployment Start](#local-deployment-start)
-	* [Build binary](#build-binary)
-	* [Run](#run-1)
-		* [Metadata server](#metadata-server)
-		* [Deployment manager server](#deployment-manager-server)
-		* [Resource server](#resource-server)
-		* [Alarm server](#alarm-server)
-		* [Alarm Subscription server](#alarm-subscription-server)
-		* [Alarm Notification server](#alarm-notification-server)
+    * [Build binary](#build-binary)
+    * [Run](#run-1)
+        * [Metadata server](#metadata-server)
+        * [Deployment manager server](#deployment-manager-server)
+        * [Resource server](#resource-server)
+            * [Run and Debug](#run-and-debug)
 * [Testing API endpoints on a cluster](#testing-api-endpoints-on-a-cluster)
 * [Registering the O2IMS application with the SMO](#registering-the-o2ims-application-with-the-smo)
 * [Using the development debug mode to attach the DLV debugger](#using-the-development-debug-mode-to-attach-the-dlv-debugger)
 * [Request Examples](#request-examples)
-	* [Query the Metadata server](#query-the-metadata-server)
-		* [GET api_versions](#get-api_versions)
-		* [GET O-Cloud infrastructure information](#get-o-cloud-infrastructure-information)
-	* [Query the Deployment manager server](#query-the-deployment-manager-server)
-		* [GET deploymentManagers List](#get-deploymentmanagers-list)
-		* [GET field or fields from the deploymentManagers List](#get-field-or-fields-from-the-deploymentmanagers-list)
-		* [GET deploymentManagers List using filter](#get-deploymentmanagers-list-using-filter)
-	* [Query the Resource server](#query-the-resource-server)
-		* [GET Resource Type List](#get-resource-type-list)
-		* [GET Specific Resource Type](#get-specific-resource-type)
-		* [GET Resource Pool List](#get-resource-pool-list)
-		* [GET Specific Resource Pool](#get-specific-resource-pool)
-		* [GET all Resources of a specific Resource Pool](#get-all-resources-of-a-specific-resource-pool)
-	* [Query the Infrastructure Inventory Subscription (Resource Server)](#query-the-infrastructure-inventory-subscription-resource-server)
-		* [GET Infrastructure Inventory Subscription List](#get-infrastructure-inventory-subscription-list)
-		* [GET Infrastructure Inventory Subscription Information](#get-infrastructure-inventory-subscription-information)
-		* [POST a new Infrastructure Inventory Subscription Information](#post-a-new-infrastructure-inventory-subscription-information)
-		* [DELETE an Infrastructure Inventory Subscription](#delete-an-infrastructure-inventory-subscription)
-
+    * [Query the Metadata server](#query-the-metadata-server)
+        * [GET api_versions](#get-api_versions)
+        * [GET O-Cloud infrastructure information](#get-o-cloud-infrastructure-information)
+    * [Query the Deployment manager server](#query-the-deployment-manager-server)
+        * [GET deploymentManagers List](#get-deploymentmanagers-list)
+        * [GET field or fields from the deploymentManagers List](#get-field-or-fields-from-the-deploymentmanagers-list)
+        * [GET deploymentManagers List using filter](#get-deploymentmanagers-list-using-filter)
+    * [Query the Resource server](#query-the-resource-server)
+        * [GET Resource Type List](#get-resource-type-list)
+        * [GET Specific Resource Type](#get-specific-resource-type-)
+        * [GET Resource Pool List](#get-resource-pool-list)
+        * [GET Specific Resource Pool](#get-specific-resource-pool)
+        * [GET all Resources of a specific Resource Pool](#get-all-resources-of-a-specific-resource-pool)
+    * [Query the Infrastructure Inventory Subscription (Resource Server)](#query-the-infrastructure-inventory-subscription-resource-server)
+        * [GET Infrastructure Inventory Subscription List](#get-infrastructure-inventory-subscription-list)
+        * [GET Infrastructure Inventory Subscription Information](#get-infrastructure-inventory-subscription-information)
+        * [POST a new Infrastructure Inventory Subscription Information](#post-a-new-infrastructure-inventory-subscription-information)
+        * [DELETE an Infrastructure Inventory Subscription](#delete-an-infrastructure-inventory-subscription)
+    * [Query the Alarm Server](#query-the-alarm-server)
+        * [GET Alarm List](#get-alarm-list)
+        * [GET Specific Alarm](#get-specific-alarm)
+        * [GET Alarm Probable Causes](#get-alarm-probable-causes)
+    * [GET Alarm Subscriptions](#get-alarm-subscriptions)
 <!-- vscode-markdown-toc-config
 	numbering=false
 	autoSave=false
@@ -161,8 +163,8 @@ metadata:
   resourceVersion: "279507769"
   uid: aeb85580-f7ca-4861-8c38-3f57902b1617
 spec:
-  alarmSubscriptionServerConfig:
-    enabled: false
+  alarmServerConfig:
+    enabled: true
   deploymentManagerServerConfig:
     backendType: regular-hub
     enabled: true
@@ -195,9 +197,8 @@ spec:
   smo:
     url: http://smo.example.com
     registrationEndpoint: /mock_smo/v1/ocloud_observer
-  #alarmSubscription is not yet available, enable it otherwise.
-  alarmSubscriptionServerConfig:
-    enabled: false 
+  alarmServerConfig:
+    enabled: true
   cloudID: f7fd171f-57b5-4a17-b176-9a73bf6064a4
   deploymentManagerServerConfig:
     enabled: true
@@ -390,186 +391,11 @@ $ ./oran-o2ims start resource-server --help
 Inside _VS Code_ use the _Run and Debug_ option with the `start
 resource-server` [configuration](.vscode/launch.json).
 
-#### <a name='Alarmserver'></a>Alarm server
-
-The alarm server exposes endpoints for retrieving alarms (AlarmEventRecord objects).
-The server relies on the Alertmanager API from Observability operator.
-Follow the these [instructions](docs/dev/env_acm.md#observability) to enable
-and configure Observability.
-
-The required URL and token can be obtained
-as follows:
-
-```
-$ export BACKEND_URL=$(
-  oc get route -n open-cluster-management-observability alertmanager -o json |
-  jq -r '"https://" + .spec.host'
-)
-$ export BACKEND_TOKEN=$(
-  oc create token -n openshift-oauth-apiserver oauth-apiserver-sa --duration=24h
-)
-$ export RESOURCE_SERVER_URL=http://localhost:8002/o2ims-infrastructureInventory/v1/
-$ export INSECURE_SKIP_VERIFY=true
-```
-
-Start the resource server with a command like this:
-
-```
-$ ./oran-o2ims start alarm-server \
---log-level=debug \
---log-file=stdout \
---api-listener-address=localhost:8003 \
---metrics-listener-address="127.0.0.1:8008" \
---cloud-id=123 \
---backend-url="${BACKEND_URL}" \
---backend-token="${BACKEND_TOKEN}" \
---resource-server-url="${RESOURCE_SERVER_URL}"
-```
-
-Notes: 
-* See more details regarding `api-listener-address` and `cloud-id` in the previous [section](#deployment-manager-server).
-* The alarm server requires the `resource-server-url`, which is needed for fetching information about resources that are associated with retrieved alarms.
-
-For more information about other command line flags use the `--help` command:
-
-```
-$ ./oran-o2ims start alarm-server --help
-```
-
-##### Run and Debug
-
-Inside _VS Code_ use the _Run and Debug_ option with the `start
-alarm-server` [configuration](.vscode/launch.json).
-
-##### Requests Examples
-
-###### GET Alarm List
-
-To get a list of alarms:
-```
-$ curl -s http://localhost:8003/o2ims-infrastructureMonitoring/v1/alarms | jq
-```
-
-###### GET an Alarm
-
-To get a specific alarm:
-```
-$ curl -s http://localhost:8003/o2ims-infrastructureMonitoring/v1/alarms/{alarmEventRecordId} | jq
-```
-
-###### GET Alarm Probable Causes
-
-To get a list of alarm probable causes:
-```
-$ curl -s http://localhost:8003/o2ims-infrastructureMonitoring/v1/alarmProbableCauses | jq
-```
-
-Notes:
-* This API is not defined by O2ims Interface Specification.
-* The server supports the `alarmProbableCauses` endpoint for exposing a custom list of probable causes.
-* The list is available in [data folder](internal/files/alarms/probable_causes.json). Can be customized and maintained as required.
-
-#### <a name='AlarmSubscriptionserver'></a>Alarm Subscription server
-
-To use the configmap to persist the subscriptions, the namespace "orantest" should be created at hub cluster for now.
-
-Start the alarm subscription server with a command like this:
-
-```
-$./oran-o2ims start alarm-subscription-server \
---log-file="servers.log" \
---log-level="debug" \
---log-field="server=alarm-subscription" \
---log-field="pid=%p" \
---api-listener-address="127.0.0.1:8006" \
---metrics-listener-address="127.0.0.1:8008" \
---namespace="test" \
---configmap-name="testConfigmap" \
---cloud-id="123" 
-```
-
-Note that by default all the servers listen on `localhost:8000`, so there will
-be conflicts if you try to run multiple servers in the same machine. The
-`--api-listener-address` and `--metrics-listener-address` options are used to select a port number that isn't in use.
-
-The `cloud-id` is any string that you want to use as identifier of the O-Cloud instance.
-
-By default, the namespace of "orantest" and configmap-name of "oran-o2ims-alarm-subscriptions" are used.
-
-For more information about other command line flags use the `--help` command:
-
-```
-$ ./oran-o2ims start alarm-subscription-server --help
-```
-
-You can send requests with commands like this:
-
-```
-$ curl -s http://localhost:8001/o2ims-infrastructureMonitoring/v1/alarmSubscriptions | jq
-```
-Above example will get a list of existing alarm subscriptions
-
-```
-$ curl -s -X POST --header "Content-Type: application/json" -d @subscription.json http://localhost:8000/o2ims-infrastructureMonitoring/v1/alarmSubscriptions
-```
-Above example will post an alarm subscription defined in subscription.json file 
-
-Inside _VS Code_ use the _Run and Debug_ option with the `start
-alarm-subscription-server` [configuration](.vscode/launch.json).
-
-#### <a name='AlarmNotificationserver'></a>Alarm Notification server
-
-The alarm-notification-server should use together with alarm subscription server. The alarm subscription sever accept and manages the alarm subscriptions. The alarm notificaton servers synch the alarm subscriptions via perisist storage. To use the configmap to persist the subscriptions, the namespace "orantest" should be created at hub cluster for now (will use official oranims namespace in future). Alarm subscripton server and corresonding alarm notification server should have same namespace and configmap-name. The alarm notification server accept the alerts, match the subscription filter, build and send out the alarm notification based on url in the subscription.
-
-The required Resource server URL and token can be obtained as follows:
-
-```
-$ export RESOURCE_SERVER_URL=http://localhost:8002/o2ims-infrastructureInventory/v1/
-$ export RESOURCE_SERVER_TOKEN=$(
-  oc whoami --show-token
-)
-$ export INSECURE_SKIP_VERIFY=true
-```
-
-Start the alarm notification server with a command like this:
-
-```
-$./oran-o2ims start alarm-notification-server \
---log-file="servers.log" \
---log-level="debug" \
---log-field="server=alarm-notification" \
---log-field="pid=%p" \
---api-listener-address="127.0.0.1:8010" \
---metrics-listener-address="127.0.0.1:8011" \
---cloud-id="123" \
---namespace="test" \
---configmap-name="testConfigmap" \
---resource-server-url="${RESOURCE_SERVER_URL}"
---resource-server-token="${RESOURCE_SERVER_TOKEN}" \
-```
-
-Note that by default all the servers listen on `localhost:8000`, so there will
-be conflicts if you try to run multiple servers in the same machine. The
-`--api-listener-address` and `--metrics-listener-address` options are used to select a port number that isn't in use.
-
-The `cloud-id` is any string that you want to use as identifier of the O-Cloud instance.
-
-By default, the namespace of "orantest" and configmap-name of "oran-o2ims-alarm-subscriptions" are used.
-
-For more information about other command line flags use the `--help` command:
-
-```
-$ ./oran-o2ims start alarm-notification-server --help
-```
-
-Inside _VS Code_ use the _Run and Debug_ option with the `start
-alarm-notification-server` [configuration](.vscode/launch.json).
-
 
 ## <a name='TestingAPIendpointsonacluster'></a>Testing API endpoints on a cluster
 
 > :exclamation: If you already have a user account from which you can generate an API access token then you can skip ahead to step
-3 assuming you have already stored your access token in a variable called `MY_TOKEN`.
+> 3 assuming you have already stored your access token in a variable called `MY_TOKEN`.
 
 1. Apply the test client service account CR instances. It will enable us to authenticate against the O2IMS API. It creates the proper cluster role (`oran-o2ims-test-client-role`) and bind it (`oran-o2ims-test-client-binding`) to the service account (`test-client`).
 
@@ -904,4 +730,40 @@ To delete an existing resource subscription:
 $ curl -ks -X DELETE \
 --header "Authorization: Bearer ${MY_TOKEN}" \
 https://${API_URI}/o2ims-infrastructureInventory/v1/subscriptions/<subscription_uuid> | jq
+```
+
+### <a name='QueryTheAlarmServer'></a>Query the Alarm Server
+
+#### <a name='GetAlarmList'></a>GET Alarm List
+
+To get a list of alarms:
+
+```bash
+$ curl -ks --header "Authorization: Bearer ${MY_TOKEN}" \
+https://localhost:8003/o2ims-infrastructureMonitoring/v1/alarms | jq
+```
+
+#### <a name='GetSpecificAlarm'></a>GET Specific Alarm
+
+To get a specific alarm:
+
+```bash
+$ curl -ks --header "Authorization: Bearer ${MY_TOKEN}" \
+https://localhost:8003/o2ims-infrastructureMonitoring/v1/alarms/{alarmEventRecordId} | jq
+```
+
+#### <a name='GetAlarmProbableCauses'></a>GET Alarm Probable Causes
+
+To get a list of alarm probable causes:
+
+```bash
+$ curl -ks --header "Authorization: Bearer ${MY_TOKEN}" \
+https://localhost:8003/o2ims-infrastructureMonitoring/v1/alarmProbableCauses | jq
+```
+
+### <a name='GetAlarmSubscriptions'></a>GET Alarm Subscriptions
+
+```bash
+$ curl -ks --header "Authorization: Bearer: ${MY_TOKEN}" \
+ http://localhost:8001/o2ims-infrastructureMonitoring/v1/alarmSubscriptions | jq
 ```
