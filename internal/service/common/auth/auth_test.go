@@ -7,8 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package auth
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -87,7 +89,7 @@ var _ = Describe("Authenticator", func() {
 			Ok:    true,
 			Error: nil,
 		}
-		req = http.Request{Header: http.Header{}}
+		req = http.Request{Header: http.Header{}, Method: http.MethodGet, URL: &url.URL{Path: "/test/path"}}
 		next = &NoopHandler{}
 		recorder = httptest.NewRecorder()
 		handler = Authenticator(&oauthAuthenticator, &k8sAuthenticator)(next)
@@ -148,6 +150,41 @@ var _ = Describe("Authenticator", func() {
 		Expect(next.(*NoopHandler).called).To(BeFalse())
 		Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
 		Expect(recorder.Body.String()).To(ContainSubstring("unable to authenticate request"))
+	})
+
+	It("Logs authentication errors with method and path", func() {
+		var logBuf bytes.Buffer
+		originalLogger := slog.Default()
+		slog.SetDefault(slog.New(slog.NewJSONHandler(&logBuf, nil)))
+		DeferCleanup(func() { slog.SetDefault(originalLogger) })
+
+		k8sAuthenticator.Error = errors.New("token expired")
+		handler.ServeHTTP(recorder, &req)
+
+		Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
+		logOutput := logBuf.String()
+		Expect(logOutput).To(ContainSubstring(`"level":"WARN"`))
+		Expect(logOutput).To(ContainSubstring(`"msg":"authentication error"`))
+		Expect(logOutput).To(ContainSubstring(`"method":"GET"`))
+		Expect(logOutput).To(ContainSubstring(`"path":"/test/path"`))
+		Expect(logOutput).To(ContainSubstring("token expired"))
+	})
+
+	It("Logs authentication rejections with method and path", func() {
+		var logBuf bytes.Buffer
+		originalLogger := slog.Default()
+		slog.SetDefault(slog.New(slog.NewJSONHandler(&logBuf, nil)))
+		DeferCleanup(func() { slog.SetDefault(originalLogger) })
+
+		k8sAuthenticator.Ok = false
+		handler.ServeHTTP(recorder, &req)
+
+		Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
+		logOutput := logBuf.String()
+		Expect(logOutput).To(ContainSubstring(`"level":"WARN"`))
+		Expect(logOutput).To(ContainSubstring(`"msg":"authentication rejected"`))
+		Expect(logOutput).To(ContainSubstring(`"method":"GET"`))
+		Expect(logOutput).To(ContainSubstring(`"path":"/test/path"`))
 	})
 })
 

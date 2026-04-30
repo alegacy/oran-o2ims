@@ -163,7 +163,7 @@ func (w *withClientVerification) AuthenticateRequest(req *http.Request) (*authen
 	}
 
 	if tokenFingerprintValues[0] != "" && tokenFingerprintValues[0] != clientFingerprint {
-		slog.Debug("fingerprint values do not match", "client", clientFingerprint, "token", tokenFingerprintValues[0])
+		slog.Warn("fingerprint values do not match", "client", clientFingerprint, "token", tokenFingerprintValues[0])
 		return nil, false, fmt.Errorf("client certificate fingerprint mismatch")
 	}
 

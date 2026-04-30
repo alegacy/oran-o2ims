@@ -7,10 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package auth
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -156,6 +158,21 @@ var _ = Describe("WithClientVerification", func() {
 		Expect(response).To(BeNil())
 		Expect(request.Header.Get(sslClientCertKey)).To(Equal(""))
 		Expect(request.Header.Get(sslClientChainKey)).To(Equal(""))
+	})
+
+	It("logs fingerprint mismatch at Warn level", func() {
+		var logBuf bytes.Buffer
+		originalLogger := slog.Default()
+		slog.SetDefault(slog.New(slog.NewJSONHandler(&logBuf, nil)))
+		DeferCleanup(func() { slog.SetDefault(originalLogger) })
+
+		noopAuthenticator.Response.User.GetExtra()[fingerprintKey] = []string{"other"}
+		_, _, err := tokenAuthenticator.AuthenticateRequest(&request)
+		Expect(err).ToNot(BeNil())
+
+		logOutput := logBuf.String()
+		Expect(logOutput).To(ContainSubstring(`"level":"WARN"`))
+		Expect(logOutput).To(ContainSubstring("fingerprint values do not match"))
 	})
 
 	It("reject a request with multiple fingerprints", func() {
