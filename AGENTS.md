@@ -10,7 +10,7 @@ O-Cloud Manager operator built on OpenShift and ACM (Red Hat Advanced Cluster Ma
 
 Use `make help` to list all available targets. Key commands:
 
-- `make ci-job` - Full CI pipeline locally (format, vet, lint, test, e2e, envtest, coverage, bundle-check). Run before submitting PRs.
+- `make ci-job` - Full CI pipeline locally (format, vet, lint, test, e2e, envtest, coverage, bundle-check). Run before submitting PRs. Includes `bundle-check`, which verifies the git tree is clean after code generation — a common CI failure when API or manifest changes aren't regenerated.
 - `make generate && make manifests && make bundle` - Regenerate code after API changes.
 
 ### Running a Single Test
@@ -56,7 +56,7 @@ REST API code under `generated/` is auto-generated from OpenAPI specs via `//go:
 The ProvisioningRequestController runs a multi-phase state machine:
 
 1. **Validation** - Validate request against ClusterTemplate schema
-2. **Hardware Provisioning** - Create NodeAllocationRequest, poll hardware plugin, create BMC secrets
+2. **Hardware Provisioning** - Create NodeAllocationRequest, watch NAR status, create BMC secrets
 3. **Cluster Installation** - Render and apply ClusterInstance, monitor ZTP progress
 4. **Post-Provisioning** - Apply policy templates, monitor compliance
 5. **Upgrades** - Handle cluster upgrade requests
@@ -67,12 +67,22 @@ Each phase sets typed conditions on the CR status. Condition helpers are in `int
 
 This project has not reached GA, so there are no production databases to migrate. Do not add new incremental migration files. Instead, modify the existing baseline files in `internal/service/{service}/db/migrations/` in place.
 
+### API Groups and Key CRDs
+
+- `clcm.openshift.io` - ClusterTemplate, ProvisioningRequest, HardwarePlugin, HardwareProfile
+- `ocloud.openshift.io` - Inventory
+- `plugins.clcm.openshift.io` - NodeAllocationRequest, AllocatedNode
+
 ## Contributing Requirements
 
 - All commits must be signed off with DCO: `git commit -s`
 - Run `make ci-job` before submitting PRs
 - After API changes: `make generate && make manifests && make bundle`
 - AI-generated code must use `Co-Authored-By` or `Assisted-By` trailer
+- Run lint checks by file type before committing:
+  - Go files: `make lint`
+  - Markdown files: `make markdownlint`
+  - Shell scripts: `make shellcheck bashate`
 - When making code changes, ensure test coverage for new code and functional
   changes. If a bug fix or new behavior is added without a corresponding test,
   write one. If an existing scenario is discovered to be untested (e.g., during
