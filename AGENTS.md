@@ -61,6 +61,10 @@ The ProvisioningRequestController runs a multi-phase state machine:
 
 Each phase sets typed conditions on the CR status. Condition helpers are in `internal/controllers/utils/conditions.go`. Condition types and reasons are defined in `api/provisioning/v1alpha1/conditions.go`.
 
+### Database Schema Changes
+
+This project has not reached GA, so there are no production databases to migrate. Do not add new incremental migration files. Instead, modify the existing baseline files in `internal/service/{service}/db/migrations/` in place.
+
 ## Contributing Requirements
 
 - All commits must be signed off with DCO: `git commit -s`
