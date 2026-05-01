@@ -49,6 +49,8 @@ Services follow a consistent initialization pattern in `internal/service/{servic
 
 Shared infrastructure lives in `internal/service/common/` (middleware, DB helpers, server config).
 
+REST API code under `generated/` is auto-generated from OpenAPI specs via `//go:generate`. Don't edit generated files — edit the `openapi.yaml` and run `make go-generate`.
+
 ### Provisioning Workflow Phases
 
 The ProvisioningRequestController runs a multi-phase state machine:
