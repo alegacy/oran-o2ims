@@ -13,6 +13,16 @@ Use `make help` to list all available targets. Key commands:
 - `make ci-job` - Full CI pipeline locally (format, vet, lint, test, e2e, envtest, coverage, bundle-check). Run before submitting PRs. Includes `bundle-check`, which verifies the git tree is clean after code generation — a common CI failure when API or manifest changes aren't regenerated.
 - `make generate && make manifests && make bundle` - Regenerate code after API changes.
 
+### Lint by File Type
+
+Run targeted checks instead of waiting for the full `ci-job`:
+
+- Go files: `make golangci-lint`
+- YAML files: `make yamllint`
+- Shell scripts: `make shellcheck bashate`
+- Markdown files: `make markdownlint` (not included in `ci-job` — run separately)
+- All of the above except markdownlint: `make lint`
+
 ### Running a Single Test
 
 Pass Ginkgo flags via `ginkgo_flags`:
@@ -79,10 +89,7 @@ This project has not reached GA, so there are no production databases to migrate
 - Run `make ci-job` before submitting PRs
 - After API changes: `make generate && make manifests && make bundle`
 - AI-generated code must use `Co-Authored-By` or `Assisted-By` trailer
-- Run lint checks by file type before committing:
-  - Go files: `make lint`
-  - Markdown files: `make markdownlint`
-  - Shell scripts: `make shellcheck bashate`
+- Run lint checks before committing (see [Lint by File Type](#lint-by-file-type))
 - When making code changes, ensure test coverage for new code and functional
   changes. If a bug fix or new behavior is added without a corresponding test,
   write one. If an existing scenario is discovered to be untested (e.g., during
