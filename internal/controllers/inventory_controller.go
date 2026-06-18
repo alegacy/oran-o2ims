@@ -820,9 +820,6 @@ func (t *reconcilerTask) deployServer(ctx context.Context, serverName string) (c
 
 	// Select the container image to use:
 	image := t.image
-	if t.object.Spec.Image != nil {
-		image = *t.object.Spec.Image
-	}
 
 	var envVars []corev1.EnvVar
 	if ctlrutils.HasDatabase(serverName) {

@@ -146,6 +146,7 @@ var _ = Describe("Inventory Controller", func() {
 			r := &Reconciler{
 				Client: fakeClient,
 				Logger: logger,
+				Image:  ServerTestImage,
 			}
 
 			// Reconcile.
@@ -163,9 +164,7 @@ var _ = Describe("Inventory Controller", func() {
 						Namespace:         ctlrutils.InventoryNamespace,
 						CreationTimestamp: metav1.Now(),
 					},
-					Spec: inventoryv1alpha1.InventorySpec{
-						Image: &ServerTestImage,
-					},
+					Spec: inventoryv1alpha1.InventorySpec{},
 				},
 			},
 			reconcile.Request{
@@ -226,9 +225,7 @@ var _ = Describe("Inventory Controller", func() {
 						Namespace:         constants.DefaultNamespace,
 						CreationTimestamp: metav1.Now(),
 					},
-					Spec: inventoryv1alpha1.InventorySpec{
-						Image: &ServerTestImage,
-					},
+					Spec: inventoryv1alpha1.InventorySpec{},
 				},
 			},
 			reconcile.Request{
@@ -305,9 +302,7 @@ var _ = Describe("Inventory Controller", func() {
 						Namespace:         constants.DefaultNamespace,
 						CreationTimestamp: metav1.Now(),
 					},
-					Spec: inventoryv1alpha1.InventorySpec{
-						Image: &ServerTestImage,
-					},
+					Spec: inventoryv1alpha1.InventorySpec{},
 				},
 			},
 			reconcile.Request{

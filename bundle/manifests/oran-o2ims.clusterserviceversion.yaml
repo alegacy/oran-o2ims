@@ -1087,14 +1087,6 @@ spec:
         path: clusterServerConfig
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: |-
-          Image is the full reference of the container image that contains the binary. This is
-          optional and the default will be the value passed to the `--image` command line flag of
-          the controller manager.
-        displayName: Image
-        path: image
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
       - description: IngressConfig defines configuration attributes related to the
           Ingress endpoint.
         displayName: Ingress Configuration
@@ -1766,6 +1758,7 @@ spec:
           resources:
           - allocatednodes
           - clustertemplates
+          - hardwareplugins
           - nodeallocationrequests
           - nodes
           - provisioningrequests
@@ -1781,6 +1774,7 @@ spec:
           - clcm.openshift.io
           resources:
           - allocatednodes/finalizers
+          - hardwareplugins/finalizers
           - nodeallocationrequests/finalizers
           verbs:
           - patch
@@ -1790,6 +1784,7 @@ spec:
           resources:
           - allocatednodes/status
           - clustertemplates/status
+          - hardwareplugins/status
           - hardwareprofiles/status
           - nodeallocationrequests/status
           - nodes/status
@@ -1989,6 +1984,45 @@ spec:
           verbs:
           - get
           - list
+          - watch
+        - apiGroups:
+          - plugins.clcm.openshift.io
+          resources:
+          - allocatednodes
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - plugins.clcm.openshift.io
+          resources:
+          - allocatednodes/finalizers
+          - nodeallocationrequests/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - plugins.clcm.openshift.io
+          resources:
+          - allocatednodes/status
+          - nodeallocationrequests/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - plugins.clcm.openshift.io
+          resources:
+          - nodeallocationrequests
+          verbs:
+          - delete
+          - get
+          - list
+          - patch
+          - update
           - watch
         - apiGroups:
           - policy.open-cluster-management.io
